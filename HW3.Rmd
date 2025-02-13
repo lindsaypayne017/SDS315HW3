@@ -1,0 +1,423 @@
+---
+title: "HW 3"
+author: "Lindsay Payne - UTEID: Lnp832"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+  pdf_document:
+    toc: true
+---
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.height=3, fig.width=4, warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+```
+
+----------------------
+
+```{r, echo = FALSE, message = FALSE}
+# Load in necessary libraries
+library(tidyverse)
+library(mosaic)
+library(dplyr)
+library(boot)
+library(knitr)
+library(kableExtra)
+```
+
+
+## Problem 1: 
+```{r, echo = FALSE, message = FALSE}
+# Read in the gasprices data set
+gas_prices <- read.csv("gasprices.csv")
+```
+
+### Part A
+
+#### Claim
+Gas stations charge more if they lack direct competition in sight.
+
+#### Evidence
+```{r, echo = FALSE}
+# Recode Competitors so that 'Yes' comes first
+gas_prices$Competitors <- factor(gas_prices$Competitors, levels = c("Y", "N"))
+
+# Bootstrap mean gas price difference between stations in and not in sight of competitors
+boot_competition <- do(10000) * diffmean(Price ~ Competitors, data = resample(gas_prices))
+
+# Calculate confidence interval
+con_comp <- confint(boot_competition, level = 0.95)
+
+# Print a table
+kable(con_comp, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+
+```{r, echo = FALSE, fig.width = 5, fig.height = 4}
+# Make a box plot
+ggplot(gas_prices) +
+  geom_boxplot(aes(x=Price, y = Competitors), fill = "plum") +
+  labs(x = "Price", y = "Competitors in Sight (Y for yes, N for no)", title = "Gas Price by Competition")
+```
+
+```{r, echo = FALSE, fig.width = 5, fig.height = 4}
+# Make a histogram
+ggplot(boot_competition) + 
+  geom_histogram(aes(x=diffmean), bins = 30) +
+  labs(x = "Difference in Mean", title = "Distribution of Difference in Mean")
+```
+
+We are 95% confident that the difference in price between gas stations with a competitor in sight and no competitor in sight is somewhere between -0.008 and 0.054 dollars, with our best guess being a difference of about 0.023 dollars. To figure this out we calculated the confidence interval of the two groups' mean price difference. The first plot above visualizes the relationship between gas price and if a station can see a competitor while the second plot displays the distribution of these mean differences across 10,000 bootstrap samples.
+
+#### Conclusion
+The estimated difference of 0.023 dollars suggests that gas stations in the presence of competitors could charge on average about 2.3 cents more than non-competitor stations, and the histogram suggests there is a slight positive difference in price means. However, the box plot shows no clear group with average higher prices and based on the confidence interval, which includes 0 therefore making the difference not statistically significant, we cannot conclude that having a competitor in sight affects gas prices.
+
+### Part B
+
+#### Claim
+The richer the area, the higher the gas prices.
+
+#### Evidence
+```{r, echo = FALSE}
+# Bootstrap the correlation between median income and gas price
+boot_income <- do(10000) * cor(Price ~ Income, data = resample(gas_prices))
+
+# Calculate confidence interval
+con_income <- confint(boot_income, level = 0.95)
+
+# Print a table
+kable(con_income, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width = 5, fig.height = 4}
+# Create scatterplot with LM
+ggplot(gas_prices) +
+  geom_point(aes(x=Price, y = Income)) +
+  geom_smooth(aes(x = Price, y = Income), method = "lm", se = FALSE, color = "plum") + 
+  labs(x = "Price", y = "Median Income", title = "Gas Price by Median Income")
+```
+
+```{r, echo = FALSE, fig.width = 5, fig.height = 4}
+# Make histogram
+ggplot(boot_income) + 
+  geom_histogram(aes(x=cor), bins = 30) +
+  labs(x = "Correlation", title = "Distribution of Correlation")
+```
+
+We are 95% confident that the correlation between gas prices and median income  is somewhere between 0.200	and 0.567, with a best guess at about 0.396. To figure this out we calculated the confidence interval of the correlation between the two variables. The first figure displays the relationship and linear regression line between gas prices and median income while the second figure shows the distribution of these correlations across 10,000 bootstrap samples.
+
+#### Conclusion
+As supported by the data, it appears to be true that the more income an area has the higher the gas prices of that area are, with the correlation value being about 0.0396. The calculated confidence interval does not include zero, meaning this correlation is statistically significant. Furthermore, the scatter plot shows a weak but positive linear trend or linear model, and the histogram shows that most of the correlation data is is above 0.
+
+### Part C
+
+#### Claim
+Gas stations at stoplights charge more.
+
+#### Evidence
+```{r, echo = FALSE}
+# Recode Stoplight so that 'Yes' comes first
+gas_prices$Stoplight <- factor(gas_prices$Stoplight, levels = c("Y", "N"))
+
+# Bootstrap the mean gas price difference between stations with and without stoplights
+boot_stoplight <- do(10000) * diffmean(Price ~ Stoplight, data = resample(gas_prices))
+
+# Calculate confidence interval
+con_stoplight <- confint(boot_stoplight, level = 0.95)
+
+# Print a table
+kable(con_stoplight, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+
+```{r, echo = FALSE, fig.width = 5, fig.height = 4}
+# Make a box plot
+ggplot(gas_prices) +
+  geom_boxplot(aes(x=Price, y = Stoplight), fill = "plum") +
+  labs(x = "Price", y = "In Front of a Stoplight (Y for yes, N for no)", title = "Gas Price by Presence of a Stoplight")
+```
+
+```{r, echo = FALSE, fig.width = 5, fig.height = 4}
+# Make a histogram
+ggplot(boot_stoplight) + 
+  geom_histogram(aes(x=diffmean), bins = 30) +
+  labs(x = "Difference in Mean", title = "Distribution of Difference in Mean")
+```
+
+We are 95% confident that the difference in price between gas stations at stoplights and not is somewhere between -0.031 and 0.039 dollars. Our best guess of this difference is about 0.003 dollars. To figure this out we calculated the confidence interval of the two variables' mean price difference. The first plot above visualizes the relationship between gas price and if the station is by a stoplight while the second plot displays the distribution of these mean differences across 10,000 bootstrap samples.
+
+#### Conclusion
+Based on the confidence interval, we cannot conclude that having a stoplight in front of a gas station has any meaningful effect on gas prices. Because the interval includes 0, the difference is not statistically significant at the 95% confidence level. Additionally, the box plot does not necessarily show a clear group with higher prices and the distribution of the means in the histogram is centered near 0.
+
+### Part D
+
+#### Claim
+Gas stations with direct highway access charge more.
+
+#### Evidence
+
+```{r, echo = FALSE}
+# Recode Highway so that 'Yes' comes first
+gas_prices$Highway <- factor(gas_prices$Highway, levels = c("Y", "N")) 
+
+# Bootstrap mean gas price difference between highway and non-highway stations where N is no and Y is yes. Since N comes first alphabetically, the result is N-Y automatically. 
+boot_highway <- do(10000) * diffmean(Price ~ Highway, data = resample(gas_prices))
+
+# Calculate confidence interval
+con_highway <- confint(boot_highway, level = 0.95)
+
+# Print a table
+kable(con_highway, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+
+```{r, echo = FALSE, fig.width = 5, fig.height = 4}
+# Make a box plot
+ggplot(gas_prices) +
+  geom_boxplot(aes(x=Price, y = Highway), fill = "plum") +
+  labs(x = "Price", y = "Has Direct Acces to a Highway (Y for yes, N for No)", title = "Gas Price by Access to a Highway")
+```
+
+```{r, echo = FALSE, fig.width = 5, fig.height = 4}
+# Make a histogram
+ggplot(boot_highway) + 
+  geom_histogram(aes(x=diffmean), bins = 30) +
+  labs(x = "Difference in Mean", title = "Distribution of Difference in Mean")
+```
+
+We are 95% confident that the difference in price between gas stations on an off the highway is somewhere between 0.009 and 0.081 dollars, with gas stations not near a highway having the higher prices. Our best guess of this difference is about 0.046 dollars. To figure this out we calculated the confidence interval of the mean difference between the two variables. The first plot above visualizes the relationship between gas price and highway presence while the second plot visualizes a distribution of these mean differences across 10,000 bootstrap samples.
+
+#### Conclusion
+The theory in question may be supported by the data in terms of the Austin area but does not correctly generalize all gas stations. While the box plot of the relationship between gas prices and highway access may indicate prices are higher near highways for the sample taken in the study, re-sampling this 10,000 times to account for statistical uncertainty identified a negative mean difference confidence interval that was statistically significant, or not due to chance. Therefore, stations with direct access to highways actually had lower mean prices, suggesting the theory is wrong.
+
+### Part E
+
+#### Claim
+Shell charges more than all other non-Shell brands.
+
+#### Evidence
+```{r, echo = FALSE}
+# Bootstrap the mean gas price difference between Shell and other brands. Subtracts the mean of non-Shell brands from the mean of Shell brands.
+boot_shell <- do(10000) * diffmean(Price ~ (Brand == "Shell"), data = resample(gas_prices))
+
+# Calculate confidence interval
+con_shell <- confint(boot_shell, level = 0.95)
+
+# Print a table
+kable(con_shell, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+
+```{r, echo = FALSE, fig.width = 5, fig.height = 4}
+# Recode the Brand column, NAs are counted as 'Other Brands'
+gas_prices$Brands <- ifelse(is.na(gas_prices$Brand) | gas_prices$Brand != "Shell", "Other Brands", "Shell")
+
+# Create box plot
+ggplot(gas_prices) +
+  geom_boxplot(aes(x = Price, y = Brands), fill = "plum") +
+  labs(x = "Price", y = "Brand", title = "Gas Price by Brand Group")
+```
+
+```{r, echo = FALSE, fig.width = 5, fig.height = 4}
+# Create histogram
+ggplot(boot_shell) + 
+  geom_histogram(aes(x=diffmean), bins = 30) +
+  labs(x = "Difference in Mean", title = "Distribution of Difference in Mean")
+```
+
+We are 95% confident that the difference in mean price between Shell brand gas stations and non-Shell stations is somewhere between -0.003 and 0.075 dollars, with a best guess of this difference at about 0.0354 dollars. To conclude this, we calculated the confidence interval of the difference between the mean prices of the Shell gas stations and non-Shell stations. The first plot above visualizes the relationship between the gas price and brands while the second plot shows a distribution of these mean differences across 10,000 bootstrap samples.
+
+#### Conclusion
+The estimate of 0.035 dollars suggests that Shell gas stations could charge on average about 3.5 cents more than non-Shell stations, the box plot shows that Shell prices may be slightly higher, and the histogram display a slightly positive mean difference. However, the 95% confidence interval includes 0 which means that the difference in mean gas prices between Shell and non-Shell brands could be zero. Therefore statistically, we cannot conclude that Shell stations charge more than non-Shell brands.
+
+## Problem 2:
+```{r, echo = FALSE, message = FALSE}
+# Read in the sclass data set
+sclass <- read.csv("sclass.csv")
+```
+
+### Part A
+```{r, echo = FALSE}
+# Filter the data for year and trim
+filtered_amg <- sclass %>%
+  filter(year == 2011, trim == "63 AMG")
+
+# Bootstrap for average mileage
+boot_mileage <- do(10000) * mean(~mileage, data = mosaic::resample(filtered_amg))
+
+# Calculate confidence interval
+con_mileage <- confint(boot_mileage, level = 0.95)
+
+# Print a table
+kable(con_mileage, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+Based on the data, our best guess is that the average mileage of 2011 S-Class 63 AMGs in the used car market when this data was collected was about 26064.2. Additionally, we're 95% confident that the average mileage is somewhere between 26286.8 and 31818.5.
+
+### Part B
+```{r, echo = FALSE}
+# Filter the data for year, trim, and color
+filtered_black <- sclass %>%
+  filter(year == 2014, trim == "550")%>%
+  mutate(isBlack = color == "Black")  
+
+# Bootstrap the proportion of black cars
+boot_black <- do(10000) * mean(~isBlack, data = mosaic::resample(filtered_black))
+
+# Calculate confidence interval
+con_black <- confint(boot_black, level = 0.95)
+
+# Print a table
+kable(con_black, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+
+Based on the data, our best guess is that 44.3% of all 2014 S-Class 550s were painted black, and we're 95% confident that the true proportion is somewhere between 41.7% and 45.3%.
+
+## Problem 3:
+```{r, echo = FALSE, message = FALSE}
+# Read in the nbc_pilotsurvey data set
+nbc_pilotsurvey <- read.csv("nbc_pilotsurvey.csv")
+```
+
+### Part A
+
+#### Question
+We are trying to answer whether the show "Living with Ed" or "My Name is Earl" make people happier based on if a show consistently produces a higher mean happy response among viewers.
+
+#### Approach
+I used a bootstrap re-sampling with 10,000 Monte Carlo simulations to estimate the difference in mean happiness ratings, the Q1_Happy variable, between viewers of "Living with Ed" and "My Name is Earl". I then applied the diffmean() function to calculate their difference in means and computed a 95% confidence interval for this difference to assess statistical uncertainty.
+
+#### Results
+```{r, echo = FALSE}
+# Filter the data for the two shows of interest
+filtered_shows <- nbc_pilotsurvey %>%
+  filter(Show %in% c("Living with Ed", "My Name is Earl"))
+
+# Bootstrap for the difference in mean happiness
+boot_happy <- do(10000) * 
+  diffmean(Q1_Happy ~ Show, data = mosaic::resample(filtered_shows))
+
+# Calculate confidence interval
+con_happy <- confint(boot_happy, level = 0.95)
+
+# Print a table
+kable(con_happy, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+
+The calculated 95% confidence interval for the difference in mean happiness scores between the two shows is (-0.400, 0.104), with an estimated difference of about -0.028. Therefore, the difference in mean viewer happiness response is about 0.03, with "My Name is Earl" having the larger happiness, and we're 95% confident that the true difference lies between 0.10 and 0.40.
+
+#### Conclusion
+Because the confidence interval includes both negative and positive values, the data suggests that neither show has a strong statistical advantage in terms of viewer happiness. While the estimate slightly favors "My Name is Earl" since the difference in happiness is negative, the uncertainty in the data prevents making a clear claim. This means that decisions regarding advertising or programming should consider additional factors beyond this measurement only.
+
+### Part B
+
+#### Question
+We are trying to answer whether the reality/contest show "The Biggest Loser" or "The Apprentice: Los Angeles" makes  people feel more annoyed based on if a show consistently produces a higher mean Q1_Annoyed response among viewers.
+
+#### Approach
+I used a bootstrap re-sampling with 10,000 simulations to estimate the difference in mean annoying ratings, the Q1_Annoying variable, between viewers of "The Biggest Loser" and "The Apprentice: Los Angeles". I then applied the diffmean() function to calculate their difference in means and computed a 95% confidence interval for this difference to assess statistical uncertainty.
+
+#### Results
+```{r, echo = FALSE}
+# Filter for the two shows of interest
+filtered_showsb <- nbc_pilotsurvey %>%
+  filter(Show %in% c("The Biggest Loser", "The Apprentice: Los Angeles"))
+
+# Bootstrap for the difference in mean happiness
+boot_annoyed <- do(10000) * 
+  diffmean(Q1_Annoyed ~ Show, data = mosaic::resample(filtered_showsb))
+
+# Calculate confidence interval
+con_annoyed <- confint(boot_annoyed, level = 0.95)
+
+# Print a table
+kable(con_annoyed, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+
+The calculated 95% confidence interval for the difference in mean annoyed scores between the two shows is (-0.525, -0.021), with an estimated difference of about -0.329. Therefore, the difference in mean viewer annoyed level response is about 0.03, with "The Apprentice: Los Angeles" having the larger annoynace, and we're 95% confident that the true difference lies between 0.02 and 0.52.
+
+#### Conclusion
+The results suggest that viewers found "The Apprentice: Los Angeles" to be more annoying, or provoke a stronger negative reaction from viewers, on average than "The Biggest Loser". Since the confidence interval does not contain 0, this difference is statistically significant or not just due to random variation.
+
+
+### Part C
+
+#### Question
+We are trying to answer what proportion of American TV watchers would we expect to give a
+response of 4 or greater to the “Q2_Confusing” question?
+
+#### Approach
+I first filtered the data set to include only responses for the show "Dancing with the Stars" and created a new variable, confusing_high, that indicates whether a viewer rated the show as confusing or viewers whose Q2_Confusing variable was greater than or equal to 4. I then calculated the sample proportion of such viewers and used bootstrap resampling with 10,000 simulations to generate a 95% confidence interval for the population's proportion.
+
+#### Results
+```{r, echo = FALSE}
+# Filter for dancing with the stars data
+filtered_dancing <- nbc_pilotsurvey %>%
+  filter(Show == "Dancing with the Stars") %>%
+  mutate(confusing_high = Q2_Confusing >= 4)
+
+# Find the sample proportion
+invisible(prop(~confusing_high, data = filtered_dancing))
+
+# Bootstrap for the proportion
+boot_confusing <- do(10000) * prop(~confusing_high, data = mosaic::resample(filtered_dancing))
+
+# Calculate confidence interval
+con_confusing <- confint(boot_confusing, level = 0.95)
+
+# Print a table
+kable(con_confusing, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+
+The sample distribution proportion of viewers who find "Dancing with the Stars" confusing was 0.0662 while the calculated confidence interval for this was (0.044, 0.116). Therefore, our best guess is that 7.0% of American TV watchers are expected to give a response of 4 or greater to the “Q2_Confusing” question, and we are 95% confident that the true proportion is somewhere between 3.9% and 12.2%.
+
+#### Conclusion
+While most viewers likely understand the show, between 3.9% and 12.2% of American TV viewers are expected to find "Dancing with the Stars" confusing. The uncertainty in our estimate is represented by this confidence interval, which accounts for possible variability in the broader population.
+
+## Problem 4:
+```{r, echo = FALSE, message = FALSE}
+# Read in the ebay data set
+ebay <- read.csv("ebay.csv")
+```
+
+#### Question
+We are trying to answer whether the extra traffic brought to ebay sites from paid search advertising on Google generates additional revenue beyond expected from organic search alone and if the cost of these ads is justified.
+
+#### Approach
+To answer the question, I focused on the treatment, where paid search advertising on Google AdWords for the whole DMA was paused for a month, and the control groups, where advertising on Google AdWords continued. I first calculated the revenue ratio for each DMA by creating a new revenue_ratio variable of interest made from dividing the revenue after variable by the revenue before (rev_after / rev_before). I then used a bootstrap 95% confidence interval with 10,000 simulations to estimate the difference in revenue ratios between the treatment and control groups.
+
+#### Results
+```{r, echo = FALSE}
+# Create revenue ratio
+ebay_data <- ebay %>%
+  mutate(revenue_ratio = rev_after / rev_before)
+
+# Calculate difference in revenue ratio between treatment and control groups
+ads_diff <- ebay_data %>%
+  group_by(adwords_pause) %>%
+  summarize(mean_ratio = mean(revenue_ratio)) %>%
+  summarize(diff = mean_ratio[adwords_pause == 0] - mean_ratio[adwords_pause == 1]) %>%
+  pull(diff)
+
+# Bootstrap re-sampling for the difference in means
+boot_ebay <- do(10000) * 
+  diffmean(revenue_ratio ~ adwords_pause, data = mosaic::resample(ebay_data))
+
+# Calculate confidence interval
+con_ebay <- confint(boot_ebay, level = 0.95)
+
+# Print a table
+kable(con_ebay, caption = "95% Bootstrap Confidence Interval") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE, position = "left")
+```
+
+The 95% confidence interval for the difference in revenue ratios between the treatment and control groups is (-0.0917, -0.0135), with an estimated difference of -0.0468. 
+Based on this, our best guess is that the difference in revenue ratio between eBay DMA's with paid search ads and DMA's with organic search alone is about 0.049 dollars. Additionally, it can be said with 95% confidence that the difference is somewhere between 0.013 and 0.092 dollars.
+
+#### Conclusion
+Since the estimated difference in ratio revenue is a negative value, -0.047, this entails that our control group, the eBay DMA's with continued paid search advertising on Google AdWords, had a higher revenue ratio for the month than without the ads. Therefore, the cost for search advertising is justified as it contributes to increased revenue compared to pausing ads. Additionally, since the confidence interval does not include 0 and is entirely negative, the difference in revenue is statistically significant or not merely the result of chance.
